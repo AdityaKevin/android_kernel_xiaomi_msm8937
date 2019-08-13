@@ -1187,8 +1187,19 @@ struct migration_arg {
  */
 static int __migrate_task(struct task_struct *p, int src_cpu, int dest_cpu)
 {
+	struct rq *rq;
+	int ret = 0;
+
 	if (unlikely(!cpu_active(dest_cpu)))
-		return rq;
+		return ret;
+
+	rq = cpu_rq(src_cpu);
+
+	raw_spin_lock(&p->pi_lock);
+	raw_spin_lock(&rq->lock);
+	/* Already moved. */
+	if (task_cpu(p) != src_cpu)
+		goto done;
 
 	/* Affinity changed (again). */
 	if (!cpumask_test_cpu(dest_cpu, tsk_cpus_allowed(p)))
